@@ -27,12 +27,16 @@ list_classifications=[]
 for i in range(10):
     calssification=np.where(labels==i, 1, 0)
     list_classifications.append(calssification)
-    weights=np.random.randn(784)*0.1
-    learning_term=0.0001
+    weights=np.zeros(784)
+    learning_term=0.001
+    # bias=np.random.randn(1)*0.01
     bias=0
-    epochs=1000
+    epochs=100
+    delta=np.zeros(784)
+    beta=0
     for epoch in range(epochs):
         print(f"epoch {epoch}\{epochs} started for digit {i} :")
+        minibatchSize=len(matrixes)//1000
         for x, category in zip(matrixes, calssification):
             product=np.dot(x, weights)+bias
             if product >=0:
@@ -40,8 +44,14 @@ for i in range(10):
             else:
                 response=0
             update=(category-response)*learning_term
-            weights+=update*x
-            bias+=update
+            delta+=update*x
+            beta+=update
+            if minibatchSize==0:
+                weights+=delta
+                bias+=beta
+                minibatchSize=len(matrixes)//1000
+            else:
+                minibatchSize-=1
     list_weights.append(weights)
     list_bias.append(bias)
 np.save("weights.npy", np.array(list_weights))
