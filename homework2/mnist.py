@@ -19,11 +19,12 @@ for matrix, label in train:
 matrixes=np.array(list1)
 labels=np.array(list2)
 
-weights=np.zeros((10, 784))
+
+weights=np.random.randn(10, 784)*0.1
 biases=np.zeros(10)
 
 
-epochs=1000
+epochs=100
 learning_rate=0.001
 
 for epoch in range(epochs):
