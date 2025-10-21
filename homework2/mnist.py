@@ -13,7 +13,7 @@ list2=[]
 for matrix, label in train:
     list1.append(np.array(matrix.flatten())/255)
     zeros=np.zeros(10)
-    zeros[label]=1
+    zeros[label]=1  
     list2.append(zeros)
 
 matrixes=np.array(list1)
@@ -30,6 +30,11 @@ learning_rate=0.001
 for epoch in range(epochs):
     print(f"{epoch}/{epochs}: AverageCrossEntropy= ",end="")
     crossEntropyAverage=0
+    combination=list(zip(matrixes, labels))
+    np.random.shuffle(combination)
+    matrixes, labels=zip(*combination)
+    matrixes=np.array(matrixes)
+    labels=np.array(labels)
     for x , target in zip(matrixes,labels):
         z=np.dot(weights, x)+biases
         above=np.exp(z)
@@ -48,6 +53,7 @@ np.save("weights.npy", np.array(weights))
 np.save("bias.npy", np.array(biases))
 ## Test
 correct=0
+predictions=[]
 for x, y in zip(matrixes, labels):
     z=np.dot(weights, x)+biases
     above=np.exp(z)
