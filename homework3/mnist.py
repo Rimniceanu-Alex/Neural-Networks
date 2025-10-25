@@ -2,6 +2,7 @@ import pickle
 import os
 import pandas as pd
 import numpy as np
+import time
 
 train_file = "extended_mnist_train.pkl"
 
@@ -25,44 +26,74 @@ biases_i_h=np.zeros(100)
 weights_h_o=np.random.randn(10, 100)*0.1
 biases_h_o=np.zeros(10)
 
-epochs=100
-learning_rate=0.001
-
+epochs=27
+learning_rate=0.01
+batch_size=64
+plateau_size=3
+plateau_count=0
+best_crossEntropy=1
+epsilon=0.01
+start=time.perf_counter()
+indices=np.arange(len(matrixes))
 for epoch in range(epochs):
+    np.random.shuffle(indices)
+    matrixes=matrixes[indices]
+    labels=labels[indices]
+    epoch_start=time.perf_counter()
     print(f"{epoch}/{epochs}: AverageCrossEntropy= ",end="")
-    crossEntropyAverage=0
-    # combination=list(zip(matrixes, labels))
-    # np.random.shuffle(combination)
-    # matrixes, labels=zip(*combination)
-    # matrixes=np.array(matrixes)
-    # labels=np.array(labels)
-    for x , target in zip(matrixes,labels):
-        # Input->Hidden
-        z1=np.dot(weights_i_h, x)+biases_i_h # avem un vector cu toate dot-producturile hident layer-elor
-        # Leaky Relu
-        activation1=np.where(z1<0 , 0.2*z1, z1)
-        # Hidden->Output
-        z2=np.dot(weights_h_o, activation1)+ biases_h_o
-         # SoftMax
-        above=np.exp(z2)
-        bellow=np.sum(above)
-        activation2=above/bellow
-        ## For the Cross Entropy/Error
-        crossEntropy=-np.sum(np.dot(target, np.log10(activation2)))
-        crossEntropyAverage+=crossEntropy
-        ##Training Hiddent->Output
-        delta2=activation2-target
-        weights_h_o-=learning_rate*np.outer(delta2,activation1)
-        biases_h_o-=learning_rate*delta2
-        ##Backpropagation Training Input->Hidden
-        leaky_relu_deriv=np.where(z1>0, 1, 0.2)
+    crossEntropySum=0
+    for i in range(0, len(matrixes), batch_size):
+        j=i+batch_size
+        matrixes_batch=matrixes[i:j]
+        labels_batch=labels[i:j]
+        batch_weights_i_h=np.zeros_like(weights_i_h)
+        batch_weights_h_o=np.zeros_like(weights_h_o)
+        batch_biases_i_h=np.zeros_like(biases_i_h)
+        batch_biases_h_o=np.zeros_like(biases_h_o)
         weights_h_oT=np.transpose(weights_h_o.copy())
-        delta1=np.dot(weights_h_oT, delta2)*leaky_relu_deriv
-        weights_i_h-=learning_rate*np.outer(delta1,x)
-        biases_i_h-=learning_rate*delta1
-    print(f"{crossEntropyAverage/len(matrixes)}")
-
-
+        for x , target in zip(matrixes_batch,labels_batch):
+            # Input->Hidden
+            z1=np.dot(weights_i_h, x)+biases_i_h # avem un vector cu toate dot-producturile hident layer-elor
+            # Leaky Relu
+            activation1=np.where(z1<0 , 0.2*z1, z1)
+            # Hidden->Output
+            z2=np.dot(weights_h_o, activation1)+ biases_h_o
+            # SoftMax
+            above=np.exp(z2)
+            bellow=np.sum(above)
+            activation2=above/bellow
+            ## For the Cross Entropy/Error
+            crossEntropy=-np.sum(np.dot(target, np.log10(activation2)))
+            crossEntropySum+=crossEntropy
+            ##Training Hiddent->Output
+            delta2=activation2-target
+            batch_weights_h_o+=np.outer(delta2,activation1)
+            batch_biases_h_o+=delta2
+            ##Backpropagation Training Input->Hidden
+            leaky_relu_deriv=np.where(z1>0, 1, 0.2)
+            delta1=np.dot(weights_h_oT, delta2)*leaky_relu_deriv
+            batch_weights_i_h+=np.outer(delta1,x)
+            batch_biases_i_h+=delta1
+        weights_h_o-=learning_rate*batch_weights_h_o
+        biases_h_o-=learning_rate*batch_biases_h_o
+        weights_i_h-=learning_rate*batch_weights_i_h
+        biases_i_h-=learning_rate*batch_biases_i_h  
+    crossEntropyAverage=crossEntropySum/len(matrixes)
+    print(f"{crossEntropyAverage}", end="")
+    if crossEntropyAverage < best_crossEntropy-epsilon:
+        plateau_count=0
+        best_crossEntropy=crossEntropyAverage
+    else:
+        plateau_count+=1
+        if plateau_count >=plateau_size:
+            learning_rate*=0.5
+            plateau_count=0
+            print("Learning Rate Changed")
+    epoch_end=time.perf_counter()
+    print(f"=>{(epoch_end-epoch_start):.6f} seconds")
+end=time.perf_counter()
+final_time=int(end-start)
+print(f"Training took {final_time//60}:{final_time-final_time//60*60} ")
 np.save("weights_i_h.npy", np.array(weights_i_h))
 np.save("bias_i_h.npy", np.array(biases_i_h))
 np.save("weights_h_o.npy", np.array(weights_h_o))
