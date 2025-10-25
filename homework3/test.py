@@ -23,6 +23,7 @@ weights_i_h=np.load("weights_i_h.npy")
 biases_i_h=np.load("bias_i_h.npy")
 weights_h_o=np.load("weights_h_o.npy")
 biases_h_o=np.load("bias_h_o.npy")
+predictions=[]
 correct=0
 for x, y in zip(matrixes, labels):
     z1=np.dot(weights_i_h, x)+biases_i_h
@@ -34,7 +35,20 @@ for x, y in zip(matrixes, labels):
     chosen_value=np.max(activation2)
     classified_digit=np.where(activation2==chosen_value)[0]
     classified_digit=np.argmax(activation2)
+    predictions.append(classified_digit)
     digit=np.argmax(y)
     if classified_digit==digit:
         correct+=1
 print(f"Out of {len(matrixes)} samples, {correct} where classified correctly\nAccuracy={correct*100/len(matrixes)}")
+
+predictions_csv = {
+    "ID": [],
+    "target": [],
+}
+
+for i, label in enumerate(predictions):
+    predictions_csv["ID"].append(i)
+    predictions_csv["target"].append(label)
+
+df = pd.DataFrame(predictions_csv)
+df.to_csv("submission.csv", index=False)
