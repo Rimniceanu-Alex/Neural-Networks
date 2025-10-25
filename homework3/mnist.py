@@ -33,14 +33,17 @@ plateau_size=3
 plateau_count=0
 best_crossEntropy=1
 epsilon=0.01
-start=time.perf_counter()
 indices=np.arange(len(matrixes))
-for epoch in range(epochs):
+total_time=480
+epoch_counter=0
+max_duration=0.0
+start=time.perf_counter()
+while total_time>0:
     np.random.shuffle(indices)
     matrixes=matrixes[indices]
     labels=labels[indices]
     epoch_start=time.perf_counter()
-    print(f"{epoch}/{epochs}: AverageCrossEntropy= ",end="")
+    print(f"{epoch_counter}|{max_duration} secs per epoch: AverageCrossEntropy= ",end="")
     crossEntropySum=0
     for i in range(0, len(matrixes), batch_size):
         j=i+batch_size
@@ -88,9 +91,15 @@ for epoch in range(epochs):
         if plateau_count >=plateau_size:
             learning_rate*=0.5
             plateau_count=0
-            print("Learning Rate Changed")
+            print("\nLearning Rate Changed")
     epoch_end=time.perf_counter()
     print(f"=>{(epoch_end-epoch_start):.6f} seconds")
+    epoch_time=epoch_end-epoch_start
+    total_time-=epoch_time
+    if epoch_time>max_duration:
+        max_duration=epoch_time
+    print(f"{total_time} seconds remaining")
+    epoch_counter+=1
 end=time.perf_counter()
 final_time=int(end-start)
 print(f"Training took {final_time//60}:{final_time-final_time//60*60} ")
