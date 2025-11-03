@@ -21,9 +21,11 @@ matrixes=np.array(list1)
 labels=np.array(list2)
 
 
-weights_i_h=np.random.randn(100, 784)*0.1
+limit1 = np.sqrt(6 / (784+100))
+weights_i_h = np.random.uniform(low=-limit1, high=limit1, size=(100, 784))*0.1
+limit2 = np.sqrt(6 / (100+10))
+weights_h_o=np.random.uniform(low=-limit2, high=limit2, size=(10, 100))*0.1
 biases_i_h=np.zeros(100)
-weights_h_o=np.random.randn(10, 100)*0.1
 biases_h_o=np.zeros(10)
 
 epochs=27
