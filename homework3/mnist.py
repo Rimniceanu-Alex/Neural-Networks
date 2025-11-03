@@ -20,10 +20,11 @@ for matrix, label in train:
 matrixes=np.array(list1)
 labels=np.array(list2)
 
-
-weights_i_h=np.random.randn(100, 784)*0.1
+limit1 = np.sqrt(1 / 784)
+weights_i_h = np.random.uniform(low=-limit1, high=limit1, size=(100, 784))*0.1
+limit2 = np.sqrt(1 / 100)
+weights_h_o=np.random.uniform(low=-limit2, high=limit2, size=(10, 100))*0.1
 biases_i_h=np.zeros(100)
-weights_h_o=np.random.randn(10, 100)*0.1
 biases_h_o=np.zeros(10)
 
 epochs=27
@@ -34,7 +35,7 @@ plateau_count=0
 best_crossEntropy=1
 epsilon=0.01
 indices=np.arange(len(matrixes))
-total_time=480
+total_time=60
 epoch_counter=0
 max_duration=0.0
 start=time.perf_counter()
