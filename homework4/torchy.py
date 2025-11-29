@@ -1,10 +1,35 @@
 import torch
-import torchvision.datasets as datasets # for Mist
 import torchvision.transforms as transforms # Transformations we can perform on our dataset for augmentation
 from torch import optim # For optimizers like SGD, Adam, etc.
 from torch import nn # To inherit our neural network
 from torch.utils.data import DataLoader # For management of the dataset (batches)
 from tqdm import tqdm # For nice progress bar!
+from torch.utils.data import Dataset
+import pickle
+import os
+import pandas as pd
+import numpy as np
+
+class ExtendedMNISTDataset(Dataset):
+    def __init__(self, root: str="/kaggle/input/fii-nn-2025-homework-4", train: bool = True):
+        self.file = "extended_mnist_test.pkl"
+        if train:
+            self.file = "extended_mnist_train.pkl"
+        self.file = os.path.join(root, self.file)
+        with open(self.file, "rb") as fp:
+            self.data = pickle.load(fp)
+        self.transform=transforms.ToTensor()
+
+    def __len__(self) -> int:
+        return len(self.data)
+
+    def __getitem__(self, i : int):
+        first=self.data[i]
+        reshape_image=first[0].reshape(28,28)
+        image=self.transform(reshape_image)
+        return image, self.data[i][1]
+
+
 
 class NN(nn.Module):
     def __init__(self, input_size, num_classes):
@@ -35,64 +60,53 @@ class NN(nn.Module):
         x = self.relu(x)
         x = self.drop(x)
         x = self.fc3(x)
-        
         return x
 
-def check_accuracy(loader, model):
- 
-    num_correct = 0
-    num_samples = 0
+def solve(loader, model):
     model.eval()
+    predictions_csv = {
+    "ID": [],
+    "target": []
+    }
     with torch.no_grad():
-        # Loop through the data
-        for x, y in loader:
-
-            # Move data to device
+        count=0
+        for x, _ in loader:
             x = x.to(device=device)
-            y = y.to(device=device)
- 
-            # Get to correct shape
             x = x.reshape(x.shape[0], -1)
-
             # Forward pass
             scores = model(x)
             _, predictions = scores.max(1)
-    
-            # Check how many we got correct
-            num_correct += (predictions == y).sum()
-    
-            # Keep track of number of samples
-            num_samples += predictions.size(0)
-    model.train()
-    return num_correct / num_samples
-
-
+            for result in predictions:
+                predictions_csv["target"].append(int(result))
+                predictions_csv["ID"].append(count)
+                count+=1
+    df = pd.DataFrame(predictions_csv)
+    df.to_csv("submission.csv", index=False)
 
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 input_size = 784
 num_classes = 10
 learning_rate = 0.001
 batch_size = 64
-num_epochs = 20
-train_dataset = datasets.MNIST(root="dataset/", train=True, transform=transforms.ToTensor(), download=True)
-test_dataset = datasets.MNIST(root="dataset/", train=False, transform=transforms.ToTensor(), download=True)
+num_epochs = 10
+
+train_dataset=ExtendedMNISTDataset(root="/Users/alexrimniceanu/facultate/anul3/sem1/nn/Neural-Networks/homework4", train=True)
+test_dataset=ExtendedMNISTDataset(root="/Users/alexrimniceanu/facultate/anul3/sem1/nn/Neural-Networks/homework4", train=False)
 
 train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size,shuffle=True)
-test_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=True)
+test_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=False)
 
 model = NN(input_size=input_size, num_classes=num_classes).to(device)
 
 # Loss and optimizer
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=0.0001)
+optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=0.0001)
 scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[5,8], gamma=0.1)
 for epoch in range(num_epochs):
     for batch_idx, (data, targets) in enumerate(tqdm(train_loader)):
-        # Try to move to GPU
         data = data.to(device=device)
         targets = targets.to(device=device)
- 
-        # Get to correct shape
+
         data = data.reshape(data.shape[0], -1)
         
         # Forward
@@ -106,4 +120,4 @@ for epoch in range(num_epochs):
         # Gradient descent
         optimizer.step()
     scheduler.step()
-print(f"Accuracy: {check_accuracy(test_loader, model)}")
+solve(test_loader, model)
